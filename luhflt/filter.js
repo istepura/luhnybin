@@ -3,43 +3,52 @@ var Transform = require('stream').Transform;
 
 util.inherits(LuhnFilter, Transform);
 
-
 function LuhnFilter(options){
     if (!(this instanceof LuhnFilter)){
         return new LuhnFilter(options);
     }
     Transform.call(this, options);
-    this._buffer  = '';
-    this.state = initstate;
+    
+    this._tbl = {
+        'init' : new FilterStateInit(),
+        'gather' : new FilterStateGather()
+    };
+    this.state = this._tbl['init'];
 }
 
-var initstate = {
-    enter : function(ctx, char){
+
+var FilterState = function(){
+};
+FilterState.prototype.isnum =  function(char){
+        return /^[0-9]+$/i.test(char);
+};
+
+FilterState.prototype.enter = function(ctx, char){
         ctx.state = this
         this.consumeChar(ctx, char);
-    },
-    consumeChar :function(ctx, char){
-        var isnum = /^[0-9]+$/i.test(char);
+};
 
-        if (isnum) {
+FilterState.prototype.consumeChar = function(ctx, char){
+        console.error('not implemented');
+};
+
+
+var FilterStateInit = function(){
+    this.consumeChar =function(ctx, char){
+        if (this.isnum(char)) {
             ctx.enterState('gather', char);
         }
         else {
             ctx.push(char);
         }
-    }
+    };
 };
+FilterStateInit.prototype = new FilterState();
 
-var gatherstate = {
-    buf : '', 
-    enter : function(ctx, char){
-        ctx.state = this
-        this.consumeChar(ctx, char);
-    },
-    consumeChar: function(ctx, char){
-        var isnum = /^[0-9]+$/i.test(char);
-
-        if (isnum) {
+var FilterStateGather = function(){
+    this.buf = '';
+    this.consumeChar= function(ctx, char){
+        if (this.isnum(char)) {
             this.buf += char;
         }
         else {
@@ -47,24 +56,20 @@ var gatherstate = {
             this.buf = '';
             ctx.enterState('init', char)
         }
-    }
+    };
 };
+FilterStateGather.prototype = new FilterState();
 
 LuhnFilter.prototype._transform = function (chunk, enc, cb){
     for (var i = 0; i < chunk.length; i++){
 
         var strchunk = chunk.toString();
         this.state.consumeChar(this, strchunk[i]);
-        //console.log(this.state);
     }
     cb();
 };
 LuhnFilter.prototype.enterState = function(statename, char){
-    var tbl = { 'init' : initstate,
-                'gather' : gatherstate,
-                };
-
-    tbl[statename].enter(this, char);
+    this._tbl[statename].enter(this, char);
 }
 
 
