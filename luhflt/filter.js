@@ -14,12 +14,15 @@ function LuhnFilter(options){
 }
 
 var initstate = {
+    enter : function(ctx, char){
+        ctx.state = this
+        this.consumeChar(ctx, char);
+    },
     consumeChar :function(ctx, char){
         var isnum = /^[0-9]+$/i.test(char);
 
         if (isnum) {
-            ctx.state = gatherstate;
-            gatherstate.consumeChar(ctx, char);
+            ctx.enterState('gather', char);
         }
         else {
             ctx.push(char);
@@ -29,6 +32,10 @@ var initstate = {
 
 var gatherstate = {
     buf : '', 
+    enter : function(ctx, char){
+        ctx.state = this
+        this.consumeChar(ctx, char);
+    },
     consumeChar: function(ctx, char){
         var isnum = /^[0-9]+$/i.test(char);
 
@@ -36,10 +43,9 @@ var gatherstate = {
             this.buf += char;
         }
         else {
-            ctx.state = initstate;
             ctx.push(this.buf);
             this.buf = '';
-            ctx.state.consumeChar(ctx, char);
+            ctx.enterState('init', char)
         }
     }
 };
@@ -53,6 +59,13 @@ LuhnFilter.prototype._transform = function (chunk, enc, cb){
     }
     cb();
 };
+LuhnFilter.prototype.enterState = function(statename, char){
+    var tbl = { 'init' : initstate,
+                'gather' : gatherstate,
+                };
+
+    tbl[statename].enter(this, char);
+}
 
 
 var lf = new LuhnFilter();
