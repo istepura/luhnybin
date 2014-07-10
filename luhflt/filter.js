@@ -15,6 +15,8 @@ function LuhnFilter(options){
     this.state = this._tbl['init'];
 }
 
+exports.LuhnFilter = LuhnFilter;
+
 
 var FilterState = function(){
 };
@@ -54,6 +56,10 @@ FilterStateGather.prototype = new FilterState();
 FilterStateGather.prototype.isgood = function(char){
     return this.isnum(char) || (/^[\ -]/.test(char));
 };
+/* 
+ * The idea is to store sequential digits in a buffer 
+ * and keep track of ranges {l:r} which need to be 'X'-ed out.
+ */
 FilterStateGather.prototype.consumeChar= function(ctx, char){
     if (this.isgood(char)) {
         this.buf += char;
@@ -133,6 +139,3 @@ LuhnFilter.prototype.enterState = function(statename, char){
 }
 
 
-var lf = new LuhnFilter();
-process.stdin.setEncoding('utf8');
-process.stdin.pipe(lf).pipe(process.stdout);
