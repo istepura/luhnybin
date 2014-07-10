@@ -50,6 +50,9 @@ var FilterStateGather = function(){
     this.buf = '';
     this.ranges = [];
     this.digitcnt = 0;
+    this.sums = [[0], [0]];
+    this.bufpos = [];
+    this.sumflag = 0;
 };
 
 FilterStateGather.prototype = new FilterState();
@@ -64,8 +67,15 @@ FilterStateGather.prototype.consumeChar= function(ctx, char){
     if (this.isgood(char)) {
         this.buf += char;
 
+        var doublesums = [0, 2, 4, 6, 8, 1, 3, 5, 7, 9];
+        var sumflag = this.sumflag;
         if (this.isnum(char)){
+            var val = parseInt(char);
+            this.sums[sumflag].push(this.sums[sumflag][this.digitcnt] + val);
+            this.sums[sumflag ^ 1].push(this.sums[sumflag ^ 1][this.digitcnt] + doublesums[val]);
             this.digitcnt += 1;
+            this.bufpos.push(this.buf.length- 1);
+            this.sumflag ^= 1;
         }
 
         if (this.digitcnt >= 14){
@@ -74,27 +84,10 @@ FilterStateGather.prototype.consumeChar= function(ctx, char){
             var thisright = this.buf.length - 1;
             [14, 15, 16].forEach(function(codelen){
                 if (digcount >= codelen){
-                    var flag = 0;
-                    var sum = 0;
-                    var len = 0;
-                    var i = thisright;
-                    while(len < codelen){
-
-                        if (/\d/.test(this.buf[i])){
-                            var val = parseInt(this.buf[i]);
-
-                            val += (val * flag);
-
-                            sum += Math.floor(val / 10);
-                            sum += (val % 10);
-                            flag ^= 1;
-                            len++;
-                        }
-                        i--;
-                    }
-                    //console.log(codelen, this.ranges, thisright, i, sum, sum % 10);
+                    sum = this.sums[sumflag][digcount] - this.sums[sumflag][digcount - codelen];
+                    //console.log(codelen, this.ranges, thisright, sum, sum % 10, this.sums, thisleft, this.bufpos);
                     if (sum % 10 == 0){
-                        var thisleft = i +1;
+                        var thisleft = this.bufpos[digcount - codelen];
                         var lastrange = this.ranges.length - 1;
 
                         //Join the ranges if overlap
@@ -125,6 +118,9 @@ FilterStateGather.prototype.consumeChar= function(ctx, char){
         this.ranges = [];
         this.buf = '';
         this.digitcnt = 0;
+        this.sumflag = 0;
+        this.sums = [[0], [0]];
+        this.bufpos = [];
         ctx.enterState('init', char)
     }
 };
