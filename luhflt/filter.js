@@ -110,6 +110,9 @@ FilterStateGather.prototype.consumeChar= function(ctx, char){
         }
     }
     else {
+        /*
+         * Dump everything we had in buffer, masking ranges
+         */
        this.ranges.forEach(function(val){
             this.buf = this.buf.replace(/[0-9]/g, function(match, offset, string){
                 if ((val.l <= offset) && (val.r >= offset)){
