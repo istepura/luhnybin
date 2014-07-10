@@ -62,31 +62,49 @@ FilterStateGather.prototype.consumeChar= function(ctx, char){
             this.digitcnt += 1;
         }
 
-        if (this.digitcnt == 14){
-            var flag = 0;
-            var sum = 0;
-            var len = 0;
-            for (var i = this.buf.length - 1; len < 14;len++){
-                var val = parseInt(this.buf[i - len]);
+        if (this.digitcnt >= 14){
 
-                val += (val * flag);
+            var digcount = this.digitcnt;
+            var thisright = this.buf.length - 1;
+            [14, 15, 16].forEach(function(codelen){
+                if (digcount >= codelen){
+                    var flag = 0;
+                    var sum = 0;
+                    var len = 0;
+                    var i = thisright;
+                    while(len < codelen){
 
-                sum += Math.floor(val / 10);
-                sum += (val % 10);
-                flag ^= 1;
-            }
-            if (sum % 10 == 0){
-                var thisleft = this.buf.length - 14;
-                var thisright = this.buf.length - 1;
-                var lastrange = this.ranges.length - 1;
-                if ( (lastrange >= 0) && (this.ranges[lastrange].r >= thisleft)){
-                    this.ranges[lastrange].r = thisright;
-                }else{
-                    this.ranges.push({l: thisleft, r : thisright});
+                        if (/\d/.test(this.buf[i])){
+                            var val = parseInt(this.buf[i]);
+
+                            val += (val * flag);
+
+                            sum += Math.floor(val / 10);
+                            sum += (val % 10);
+                            flag ^= 1;
+                            len++;
+                        }
+                        i--;
+                    }
+                    //console.log(codelen, this.ranges, thisright, i, sum, sum % 10);
+                    if (sum % 10 == 0){
+                        var thisleft = i +1;
+                        var lastrange = this.ranges.length - 1;
+
+                        //Join the ranges if overlap
+                        if ( (lastrange >= 0) && (this.ranges[lastrange].r >= thisleft)){
+                            this.ranges[lastrange].r = thisright;
+                            this.ranges[lastrange].l = Math.min(this.ranges[lastrange].l, thisleft);
+                        }else{
+                            this.ranges.push({l: thisleft, r : thisright});
+                        }
+                    }
                 }
-            }
+            }, this);
         }
-        this.ranges.forEach(function(val){
+    }
+    else {
+       this.ranges.forEach(function(val){
             this.buf = this.buf.replace(/[0-9]/g, function(match, offset, string){
                 if ((val.l <= offset) && (val.r >= offset)){
                     return 'X';
@@ -94,9 +112,8 @@ FilterStateGather.prototype.consumeChar= function(ctx, char){
             });
 
         }, this);
-    }
-    else {
         ctx.push(this.buf);
+        this.ranges = [];
         this.buf = '';
         this.digitcnt = 0;
         ctx.enterState('init', char)
