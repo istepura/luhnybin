@@ -47,7 +47,7 @@ var FilterStateInit = function(){
 FilterStateInit.prototype = new FilterState();
 
 var FilterStateGather = function(){
-    this.buf = '';
+    this.buf = [];
     this.ranges = [];
     this.digitcnt = 0;
     this.sums = [[0], [0]];
@@ -67,7 +67,7 @@ var isgood = function(char){
 FilterStateGather.prototype.consumeChar= function(ctx, char){
     var ranges = this.ranges;
     if (isgood(char)) {
-        this.buf += char;
+        this.buf.push(char);
 
         var doublesums = [0, 2, 4, 6, 8, 1, 3, 5, 7, 9];
         var sumflag = this.sumflag;
@@ -88,9 +88,9 @@ FilterStateGather.prototype.consumeChar= function(ctx, char){
 
             var digcount = this.digitcnt;
 
-            [14, 15, 16].forEach(function(codelen){
+            for (var codelen = 16; codelen > 13; codelen--){
                 if (digcount >= codelen){
-                    sum = sumarray[digcount] - sumarray[digcount - codelen];
+                    var sum = sumarray[digcount] - sumarray[digcount - codelen];
                     //console.log(codelen, this.ranges, thisright, sum, sum % 10, this.sums, thisleft, this.bufpos);
                     if (sum % 10 == 0){
                         var thisleft = this.bufpos[digcount - codelen];
@@ -105,24 +105,28 @@ FilterStateGather.prototype.consumeChar= function(ctx, char){
                         }
                     }
                 }
-            }, this);
+            };
         }
     }
     else {
         /*
          * Dump everything we had in buffer, masking ranges
          */
-       ranges.forEach(function(val){
-            this.buf = this.buf.replace(/[0-9]/g, function(match, offset, string){
-                if ((val.l <= offset) && (val.r >= offset)){
-                    return 'X';
-                }else return match;
-            });
+       var i = 0;
+       var buf = this.buf;
+       while (i < ranges.length){
+           var val = ranges[i];
 
-        }, this);
-        ctx.push(this.buf);
+            for (var l = val.l; l <= val.r; l++){
+                if (isnum(buf[l])){
+                    buf[l] = 'X';
+                }
+            }
+            i++;
+        };
+        ctx.push(buf.join(''));
         this.ranges = [];
-        this.buf = '';
+        this.buf = [];
         this.digitcnt = 0;
         this.sumflag = 0;
         this.sums = [[0], [0]];
