@@ -58,8 +58,8 @@ FilterStateGather.prototype = new FilterState();
 var isgood = function(char){
     return isnum(char) || (/^[\ -]/.test(char));
 }
-/* 
- * The idea is to store sequential digits in a buffer 
+/*
+ * The idea is to store sequential digits in a buffer
  * and keep track of ranges {l:r} which need to be 'X'-ed out.
  */
 FilterStateGather.prototype.consumeChar= function(ctx, char){
@@ -102,7 +102,7 @@ FilterStateGather.prototype.consumeChar= function(ctx, char){
                         }else{
                             ranges.push({l: thisleft, r : thisright});
                         }
-                        /* We can break the loop, since we're going 'greedy', 
+                        /* We can break the loop, since we're going 'greedy',
                          * trying to X-out 16-then-15-then-14. If we X-ed out 16-digin #
                          * there's no need to check if 15 & 14 are valid ones.
                          */
@@ -140,9 +140,10 @@ FilterStateGather.prototype.consumeChar= function(ctx, char){
 }
 
 LuhnFilter.prototype._transform = function (chunk, enc, cb){
-    for (var i = 0; i < chunk.length; i++){
 
-        var strchunk = chunk.toString();
+    var strchunk = chunk.toString();
+
+    for (var i = 0; i < strchunk.length; i++){
         this.state.consumeChar(this, strchunk[i]);
     }
     cb();
