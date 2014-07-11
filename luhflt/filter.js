@@ -18,33 +18,31 @@ function LuhnFilter(options){
 exports.LuhnFilter = LuhnFilter;
 
 
-var FilterState = function(){
-};
+var FilterState = function(){ }
 var isnum =  function(char){
         return /^[0-9]$/i.test(char);
-};
+}
 
 FilterState.prototype.enter = function(ctx, char){
         ctx.state = this
         this.consumeChar(ctx, char);
-};
+}
 
 FilterState.prototype.consumeChar = function(ctx, char){
         console.error('not implemented');
-};
+}
 
 
-var FilterStateInit = function(){
-    this.consumeChar =function(ctx, char){
-        if (isnum(char)) {
-            ctx.enterState('gather', char);
-        }
-        else {
-            ctx.push(char);
-        }
-    };
-};
+var FilterStateInit = function(){ }
 FilterStateInit.prototype = new FilterState();
+FilterStateInit.prototype.consumeChar = function(ctx, char){
+    if (isnum(char)) {
+        ctx.enterState('gather', char);
+    }
+    else {
+        ctx.push(char);
+    }
+}
 
 var FilterStateGather = function(){
     this.buf = [];
@@ -53,19 +51,20 @@ var FilterStateGather = function(){
     this.sums = [[0], [0]];
     this.bufpos = [];
     this.sumflag = 0;
-};
+}
 
 FilterStateGather.prototype = new FilterState();
 
 var isgood = function(char){
     return isnum(char) || (/^[\ -]/.test(char));
-};
+}
 /* 
  * The idea is to store sequential digits in a buffer 
  * and keep track of ranges {l:r} which need to be 'X'-ed out.
  */
 FilterStateGather.prototype.consumeChar= function(ctx, char){
     var ranges = this.ranges;
+
     if (isgood(char)) {
         this.buf.push(char);
 
@@ -103,9 +102,14 @@ FilterStateGather.prototype.consumeChar= function(ctx, char){
                         }else{
                             ranges.push({l: thisleft, r : thisright});
                         }
+                        /* We can break the loop, since we're going 'greedy', 
+                         * trying to X-out 16-then-15-then-14. If we X-ed out 16-digin #
+                         * there's no need to check if 15 & 14 are valid ones.
+                         */
+                        break;
                     }
                 }
-            };
+            }
         }
     }
     else {
@@ -123,7 +127,7 @@ FilterStateGather.prototype.consumeChar= function(ctx, char){
                 }
             }
             i++;
-        };
+        }
         ctx.push(buf.join(''));
         this.ranges = [];
         this.buf = [];
@@ -131,9 +135,9 @@ FilterStateGather.prototype.consumeChar= function(ctx, char){
         this.sumflag = 0;
         this.sums = [[0], [0]];
         this.bufpos = [];
-        ctx.enterState('init', char)
+        ctx.enterState('init', char);
     }
-};
+}
 
 LuhnFilter.prototype._transform = function (chunk, enc, cb){
     for (var i = 0; i < chunk.length; i++){
@@ -142,7 +146,7 @@ LuhnFilter.prototype._transform = function (chunk, enc, cb){
         this.state.consumeChar(this, strchunk[i]);
     }
     cb();
-};
+}
 LuhnFilter.prototype.enterState = function(statename, char){
     this._tbl[statename].enter(this, char);
 }
